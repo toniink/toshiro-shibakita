@@ -1,48 +1,35 @@
-<html>
-
-<head>
-<title>Exemplo PHP</title>
-</head>
-<body>
 
 <?php
-ini_set("display_errors", 1);
-header('Content-Type: text/html; charset=iso-8859-1');
+// Agora buscamos as configurações das variáveis de ambiente do Docker
+$host = getenv('DB_HOST') ?: 'mysql-server';
+$user = getenv('DB_USER') ?: 'root';
+$pass = getenv('DB_PASSWORD'); 
+$db   = getenv('DB_NAME');
 
+echo "<div style='text-align: center; font-family: Arial; margin-top: 30px;'>";
+echo "<h1>🚀 Dashboard Protegido - Swarm</h1>";
 
-
-echo 'Versao Atual do PHP: ' . phpversion() . '<br>';
-
-$servername = "54.234.153.24";
-$username = "root";
-$password = "Senha123";
-$database = "meubanco";
-
-// Criar conexão
-
-
-$link = new mysqli($servername, $username, $password, $database);
-
-/* check connection */
-if (mysqli_connect_errno()) {
-    printf("Connect failed: %s\n", mysqli_connect_error());
-    exit();
+if (!$pass || !$db) {
+    echo "<h3 style='color: orange;'>⚠️ Variáveis de ambiente não configuradas!</h3>";
 }
 
-$valor_rand1 =  rand(1, 999);
-$valor_rand2 = strtoupper(substr(bin2hex(random_bytes(4)), 1));
-$host_name = gethostname();
+try {
+    $link = new mysqli($host, $user, $pass, $db);
+    if ($link->connect_error) { throw new Exception($link->connect_error); }
 
+    $link->query("CREATE TABLE IF NOT EXISTS acessos (id INT AUTO_INCREMENT PRIMARY KEY, data_hora DATETIME, container_id VARCHAR(50))");
+    $meu_id = gethostname();
+    $link->query("INSERT INTO acessos (data_hora, container_id) VALUES (NOW(), '$meu_id')");
 
-$query = "INSERT INTO dados (AlunoID, Nome, Sobrenome, Endereco, Cidade, Host) VALUES ('$valor_rand1' , '$valor_rand2', '$valor_rand2', '$valor_rand2', '$valor_rand2','$host_name')";
+    echo "<h3 style='color: green;'>✅ Conexão Segura: OK!</h3>";
+    $res = $link->query("SELECT COUNT(*) as total FROM acessos");
+    $row = $res->fetch_assoc();
+    echo "<p>Total de registros: <strong>" . $row['total'] . "</strong></p>";
 
-
-if ($link->query($query) === TRUE) {
-  echo "New record created successfully";
-} else {
-  echo "Error: " . $link->error;
+} catch (Exception $e) {
+    echo "<h3 style='color: red;'>❌ Erro: " . $e->getMessage() . "</h3>";
 }
 
+echo "<h1>ID: " . gethostname() . "</h1>";
+echo "</div>";
 ?>
-</body>
-</html>
